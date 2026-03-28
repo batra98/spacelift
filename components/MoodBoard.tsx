@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ShoppingBag, Wand2, ChevronDown, ChevronUp, CopyPlus } from "lucide-react";
 import ProductCard from "./ProductCard";
@@ -41,8 +41,15 @@ export default function MoodBoard({
     return Object.entries(groups).map(([name, items]) => ({ name, items }));
   }, [products]);
 
-  // Keep track of which categories are expanded. Default first one to open.
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(categories[0] ? [categories[0].name] : []));
+  // Keep track of which categories are expanded — start all open
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
+
+  // Auto-expand all categories whenever a new product set arrives
+  useEffect(() => {
+    if (categories.length > 0) {
+      setExpandedCats(new Set(categories.map((c) => c.name)));
+    }
+  }, [categories]);
 
   const toggleCategory = (name: string) => {
     setExpandedCats((prev) => {
@@ -66,7 +73,7 @@ export default function MoodBoard({
         <div className="flex items-center gap-2">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(124, 58, 237, 0.2)" }}
+            style={{ background: "rgba(0, 0, 0, 0.1)" }}
           >
             <ShoppingBag size={16} style={{ color: "var(--accent-secondary)" }} />
           </div>
@@ -95,8 +102,8 @@ export default function MoodBoard({
               onClick={onSaveToGallery}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl"
               style={{
-                background: "rgba(124, 58, 237, 0.15)",
-                border: "1px solid rgba(124, 58, 237, 0.3)",
+                background: "rgba(181, 144, 106, 0.10)",
+                border: "1px solid rgba(0, 0, 0, 0.12)",
                 color: "var(--accent-secondary)",
               }}
             >
@@ -127,7 +134,7 @@ export default function MoodBoard({
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(124, 58, 237, 0.1)" }}
+              style={{ background: "rgba(181, 144, 106, 0.07)" }}
             >
               <Sparkles size={24} style={{ color: "var(--accent-primary)" }} />
             </motion.div>
@@ -149,9 +156,10 @@ export default function MoodBoard({
                 <div key={name} className="flex flex-col gap-2">
                   <button
                     onClick={() => toggleCategory(name)}
-                    className="flex justify-between items-center w-full px-2 py-1 text-sm font-bold text-white/80 hover:text-white transition-colors"
+                    className="flex justify-between items-center w-full px-2 py-1 text-sm font-bold hover:opacity-70 transition-opacity"
+                    style={{ color: "var(--text-primary)" }}
                   >
-                    <span className="capitalize">{name} <span className="text-white/40 text-xs ml-1">({items.length})</span></span>
+                    <span className="capitalize">{name} <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", marginLeft: "4px" }}>({items.length})</span></span>
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   <AnimatePresence>

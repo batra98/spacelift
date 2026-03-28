@@ -76,7 +76,7 @@ export default function RoomCanvas({
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center pulse-glow"
-              style={{ background: "rgba(124, 58, 237, 0.15)" }}
+              style={{ background: "rgba(181, 144, 106, 0.10)" }}
             >
               <ImageIcon size={28} style={{ color: "var(--accent-primary)" }} />
             </div>

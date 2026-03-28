@@ -23,8 +23,8 @@ export default function ProductCard({ product, index, isSelected, onSelect }: Pr
       style={{
         border: isSelected
           ? "1.5px solid var(--accent-primary)"
-          : "1px solid rgba(124, 58, 237, 0.15)",
-        boxShadow: isSelected ? "0 0 18px rgba(124, 58, 237, 0.35)" : undefined,
+          : "1px solid rgba(0, 0, 0, 0.08)",
+        boxShadow: isSelected ? "0 0 18px rgba(181, 144, 106, 0.35)" : undefined,
       }}
     >
       {/* Selection checkbox */}
@@ -55,7 +55,7 @@ export default function ProductCard({ product, index, isSelected, onSelect }: Pr
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div
           className="absolute top-2.5 right-2.5 badge"
-          style={{ background: "rgba(124, 58, 237, 0.85)", color: "white" }}
+          style={{ background: "rgba(28, 28, 30, 0.85)", color: "white" }}
         >
           {product.category}
         </div>
@@ -80,7 +80,7 @@ export default function ProductCard({ product, index, isSelected, onSelect }: Pr
           <div
             className="text-xs font-medium px-2 py-1 rounded-full"
             style={{
-              background: isSelected ? "rgba(124, 58, 237, 0.2)" : "rgba(255,255,255,0.05)",
+              background: isSelected ? "rgba(181, 144, 106, 0.12)" : "rgba(255,255,255,0.05)",
               color: isSelected ? "var(--accent-secondary)" : "var(--text-secondary)",
             }}
           >

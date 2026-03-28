@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CopyPlus, Clock, ArrowLeft, Trash2 } from "lucide-react";
-import ChatPane from "@/components/ChatPane";
+import ChatPane, { type Product, type ChatPaneRef } from "@/components/ChatPane";
 import MoodBoard from "@/components/MoodBoard";
 import RoomCanvas from "@/components/RoomCanvas";
-import type { Product } from "@/app/api/products/route";
 
 export interface SavedSession {
   id: string;
@@ -18,19 +17,35 @@ export interface SavedSession {
 }
 
 export default function Home() {
+  const chatRef = useRef<ChatPaneRef>(null);
   const [view, setView] = useState<"design" | "gallery">("design");
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
 
   // Design state
   const [roomImage, setRoomImage] = useState<string | null>(null);
-  const [roomMimeType, setRoomMimeType] = useState("image/jpeg");
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editedImageBase64, setEditedImageBase64] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Compress a data URL to ≤600px wide JPEG at 50% quality to keep localStorage small
+  const compressDataUrl = useCallback((dataUrl: string, maxPx = 600): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.5));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: use original
+      img.src = dataUrl;
+    });
+  }, []);
 
   // Load gallery
   useEffect(() => {
@@ -44,25 +59,39 @@ export default function Home() {
     }
   }, []);
 
-  const saveSessionToGallery = useCallback(() => {
+  const saveSessionToGallery = useCallback(async () => {
     if (!roomImage || !editedImageBase64 || selectedIds.size === 0) return;
     const selectedProducts = products.filter((p) => selectedIds.has(p.id));
     const totalCost = selectedProducts.reduce((sum, p) => sum + p.price, 0);
 
+    // Compress images before storing to avoid QuotaExceededError
+    const [compressedOriginal, compressedEdited] = await Promise.all([
+      compressDataUrl(roomImage),
+      compressDataUrl(`data:image/jpeg;base64,${editedImageBase64}`),
+    ]);
+
     const newSession: SavedSession = {
       id: Date.now().toString(),
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
-      originalImage: roomImage,
-      editedImage: editedImageBase64,
+      originalImage: compressedOriginal,
+      editedImage: compressedEdited.split(",")[1], // strip data: prefix
       products: selectedProducts,
       totalCost,
     };
 
     const updated = [newSession, ...savedSessions];
     setSavedSessions(updated);
-    localStorage.setItem("spaceliftSessions", JSON.stringify(updated));
-    alert("Saved to Gallery!");
-  }, [roomImage, editedImageBase64, selectedIds, products, savedSessions]);
+    try {
+      localStorage.setItem("spaceliftSessions", JSON.stringify(updated));
+      alert("Saved to Gallery!");
+    } catch (e) {
+      // Still too big even after compression — trim oldest sessions
+      const trimmed = [newSession, ...savedSessions.slice(0, 2)];
+      setSavedSessions(trimmed);
+      try { localStorage.setItem("spaceliftSessions", JSON.stringify(trimmed)); } catch { /* give up */ }
+      alert("Saved (older sessions trimmed to free space).");
+    }
+  }, [roomImage, editedImageBase64, selectedIds, products, savedSessions, compressDataUrl]);
 
   const deleteSession = useCallback((id: string) => {
     const updated = savedSessions.filter((s) => s.id !== id);
@@ -76,42 +105,55 @@ export default function Home() {
     setEditedImageBase64(null);
     setSelectedIds(new Set());
     setSelectedProduct(null);
-    const mime = dataUrl.split(":")[1]?.split(";")[0] || "image/jpeg";
-    setRoomMimeType(mime);
   }, []);
 
-  const handleVisionResult = useCallback(
-    async (result: { chat_response: string; search_queries: string[] }) => {
-      if (!result.search_queries?.length) return;
-      setIsLoadingProducts(true);
-      setProducts([]);
-      setSelectedIds(new Set());
-      setEditedImageBase64(null);
+  const handleProductsFound = useCallback((found: Product[]) => {
+    setProducts(found);
+    setSelectedIds(new Set());
+    setEditedImageBase64(null);
+  }, []);
 
-      try {
-        const fetches = result.search_queries.map((q) =>
-          fetch(`/api/products?q=${encodeURIComponent(q)}`).then((r) => r.json())
-        );
-        const arrays = (await Promise.all(fetches)) as Product[][];
-        const seen = new Set<string>();
-        const all: Product[] = [];
-        for (const arr of arrays) {
-          for (const p of arr) {
-            if (!seen.has(p.id)) {
-              seen.add(p.id);
-              all.push(p);
-            }
-          }
-        }
-        setProducts(all.slice(0, 12));
-      } catch (e) {
-        console.error("Failed to fetch products:", e);
-      } finally {
-        setIsLoadingProducts(false);
+  const handleRoomEdited = useCallback((base64: string, mimeType = "image/jpeg") => {
+    setEditedImageBase64(base64);
+    // Promote the edited image to be the new room context so
+    // further chat messages ("change the chair color") work on the edited photo
+    setRoomImage(`data:${mimeType};base64,${base64}`);
+  }, []);
+
+  const [isApplying, setIsApplying] = useState(false);
+
+  const handleApply = useCallback(async () => {
+    if (selectedIds.size === 0 || !roomImage) return;
+    const selectedProducts = products.filter((p) => selectedIds.has(p.id));
+    // Extract base64 from the data URL
+    const parts = roomImage.split(",");
+    const b64 = parts[1];
+    const mime = parts[0].split(":")[1].split(";")[0];
+
+    setIsApplying(true);
+    try {
+      const res = await fetch("/api/edit-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomImage: b64,
+          roomMimeType: mime,
+          products: selectedProducts.map((p) => ({ name: p.name, imageUrl: p.imageUrl })),
+        }),
+      });
+      const data = await res.json() as { editedImageBase64?: string; mimeType?: string; error?: string };
+      if (data.editedImageBase64) {
+        handleRoomEdited(data.editedImageBase64, data.mimeType || "image/jpeg");
+      } else {
+        alert(data.error || "Render failed — try again.");
       }
-    },
-    []
-  );
+    } catch (e) {
+      console.error(e);
+      alert("Render failed — try again.");
+    } finally {
+      setIsApplying(false);
+    }
+  }, [selectedIds, roomImage, products, handleRoomEdited]);
 
   const handleSelect = useCallback((product: Product) => {
     setSelectedIds((prev) => {
@@ -119,45 +161,12 @@ export default function Home() {
       if (next.has(product.id)) {
         next.delete(product.id);
       } else {
-        // No more 3-item limit
         next.add(product.id);
       }
       return next;
     });
     setSelectedProduct(product);
   }, []);
-
-  const handleApply = useCallback(async () => {
-    if (!roomImage || selectedIds.size === 0) return;
-    const selectedProducts = products.filter((p) => selectedIds.has(p.id));
-    setIsApplying(true);
-    try {
-      const base64 = roomImage.split(",")[1];
-      const res = await fetch("/api/edit-room", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomImage: base64,
-          roomMimeType,
-          products: selectedProducts.map((p) => ({
-            name: p.name,
-            imageUrl: p.imageUrl,
-          })),
-        }),
-      });
-      const data = await res.json();
-      if (data.editedImageBase64) {
-        setEditedImageBase64(data.editedImageBase64);
-      } else {
-        console.error("Edit room failed:", data.error);
-        alert("Room editing failed: " + (data.error || "Unknown error"));
-      }
-    } catch (e) {
-      console.error("Apply failed:", e);
-    } finally {
-      setIsApplying(false);
-    }
-  }, [roomImage, roomMimeType, selectedIds, products]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -173,7 +182,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-2xl flex items-center justify-center pulse-glow"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #e040fb)" }}
+              style={{ background: "linear-gradient(135deg, #1C1C1E, #2c2c2e)" }}
             >
               <span className="text-sm font-black text-white">S</span>
             </div>
@@ -182,7 +191,7 @@ export default function Home() {
                 Space
                 <span
                   style={{
-                    background: "linear-gradient(90deg, #a855f7, #e040fb)",
+                    background: "linear-gradient(90deg, #B5906A, #8B6F47)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                   }}
@@ -225,9 +234,9 @@ export default function Home() {
           <div
             className="badge"
             style={{
-              background: "rgba(124, 58, 237, 0.15)",
+              background: "rgba(181, 144, 106, 0.10)",
               color: "var(--accent-secondary)",
-              border: "1px solid rgba(124, 58, 237, 0.3)",
+              border: "1px solid rgba(0, 0, 0, 0.12)",
             }}
           >
             Gemini 2.5 Flash + 3.1 Image
@@ -258,7 +267,7 @@ export default function Home() {
                   <RoomCanvas
                     imageUrl={roomImage}
                     isPlacing={false}
-                    isApplying={isApplying}
+                    isApplying={false}
                     selectedProduct={selectedProduct}
                     editedImageUrl={editedImageBase64}
                   />
@@ -271,8 +280,11 @@ export default function Home() {
                   className="flex-1 min-h-0"
                 >
                   <ChatPane
-                    onVisionResult={handleVisionResult}
+                    ref={chatRef}
+                    onProductsFound={handleProductsFound}
+                    onRoomEdited={handleRoomEdited}
                     onImageUpload={handleImageUpload}
+                    roomImageDataUrl={roomImage}
                   />
                 </motion.div>
               </div>
@@ -286,7 +298,7 @@ export default function Home() {
               >
                 <MoodBoard
                   products={products}
-                  isLoading={isLoadingProducts}
+                  isLoading={false}
                   selectedIds={selectedIds}
                   isApplying={isApplying}
                   showSaveToGallery={!!editedImageBase64}

@@ -7,8 +7,12 @@ interface ProductRef {
   imageUrl: string;
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
 async function urlToBase64(url: string): Promise<{ data: string; mimeType: string }> {
-  const res = await fetch(url, { redirect: "follow" });
+  // Resolve relative paths to absolute — server-side fetch requires full URLs
+  const absoluteUrl = url.startsWith("/") ? `${BASE_URL}${url}` : url;
+  const res = await fetch(absoluteUrl, { redirect: "follow" });
   // Strip charset suffix — e.g. "image/jpeg; charset=utf-8" → "image/jpeg"
   const rawMime = res.headers.get("content-type") || "";
   const mimeType = rawMime.split(";")[0].trim() || "image/jpeg";
@@ -66,11 +70,15 @@ export async function POST(req: NextRequest) {
 
 CRITICAL INSTRUCTIONS:
 1. You MUST include EVERY SINGLE ITEM provided in the reference images. Do not omit any.
-2. The items MUST look exactly as they do in the reference images — do not change their design, color, or shape.
-3. Place items in logical, natural positions (e.g., rugs on the floor, art on walls, lamps on the floor/tables).
-4. Match the room's existing lighting exactly: replicate the light direction, color temperature, and shadow angles on each placed item.
-5. Scale each item correctly relative to the room's existing furniture.
-6. Blend the edges and adjust contrast so the items do not look artificially "pasted" in, but rather like they naturally belong in this specific room.`,
+2. The items MUST look IDENTICAL to the reference images — do not change their brand, color, texture, or design features.
+3. Place items in logical, professional interior design positions:
+   - Rugs: flat on the floor, under furniture where appropriate.
+   - Art/Mirrors: centered on walls at eye level.
+   - Lamps: on the floor or side tables.
+   - Plants: in corners or on surfaces.
+4. Match the room's existing lighting EXACTLY (color temperature, shadows, highlights).
+5. Scale each item realistically relative to the room's architecture.
+6. The final output must be a single, cohesive, high-quality image of the room with these items naturally integrated. Do not include any text, UI elements, or watermark.`,
       },
       {
         inline_data: {
