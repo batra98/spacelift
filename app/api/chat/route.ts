@@ -102,14 +102,18 @@ export async function POST(req: NextRequest) {
 
 
     if (msg.role === "assistant") {
-      const toolParts = (msg.parts ?? []).filter(
-        (p) => p.type.startsWith("tool-") || p.type === "dynamic-tool"
+      // Only include tool parts that have completed (have output),
+      // otherwise the SDK throws MissingToolResultsError
+      const completedToolParts = (msg.parts ?? []).filter(
+        (p) =>
+          (p.type.startsWith("tool-") || p.type === "dynamic-tool") &&
+          p.output !== undefined
       );
       const textContent = (msg.parts ?? [])
         .filter((p) => p.type === "text")
         .map((p) => ({ type: "text" as const, text: p.text ?? "" }));
 
-      const toolCalls = toolParts.map((p) => {
+      const toolCalls = completedToolParts.map((p) => {
         const toolName = p.type.startsWith("tool-") ? p.type.slice(5) : (p.toolName ?? "");
         return {
           type: "tool-call" as const,
@@ -124,12 +128,10 @@ export async function POST(req: NextRequest) {
 
       const result: unknown[] = [{ role: "assistant", content: assistantContent }];
 
-      // Emit tool-result messages for completed tool calls
-      const completed = toolParts.filter((p) => p.output !== undefined);
-      if (completed.length > 0) {
+      if (completedToolParts.length > 0) {
         result.push({
           role: "tool",
-          content: completed.map((p) => {
+          content: completedToolParts.map((p) => {
             const toolName = p.type.startsWith("tool-") ? p.type.slice(5) : (p.toolName ?? "");
             // Strip large base64 payloads from history to avoid bloating context
             let rawOutput = p.output;
