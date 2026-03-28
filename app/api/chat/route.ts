@@ -107,12 +107,12 @@ export async function POST(req: NextRequest) {
       );
       const textContent = (msg.parts ?? [])
         .filter((p) => p.type === "text")
-        .map((p) => ({ type: "text", text: p.text ?? "" }));
+        .map((p) => ({ type: "text" as const, text: p.text ?? "" }));
 
       const toolCalls = toolParts.map((p) => {
         const toolName = p.type.startsWith("tool-") ? p.type.slice(5) : (p.toolName ?? "");
         return {
-          type: "tool-call",
+          type: "tool-call" as const,
           toolCallId: p.toolCallId ?? toolName,
           toolName,
           input: p.input ?? {},
@@ -131,11 +131,21 @@ export async function POST(req: NextRequest) {
           role: "tool",
           content: completed.map((p) => {
             const toolName = p.type.startsWith("tool-") ? p.type.slice(5) : (p.toolName ?? "");
+            // Strip large base64 payloads from history to avoid bloating context
+            let rawOutput = p.output;
+            if (toolName === "render_design") {
+              const out = p.output as Record<string, unknown> | undefined;
+              if (out?.editedImageBase64) {
+                rawOutput = { success: true, mimeType: out.mimeType ?? "image/jpeg" };
+              }
+            }
             return {
-              type: "tool-result",
+              type: "tool-result" as const,
               toolCallId: p.toolCallId ?? toolName,
               toolName,
-              output: p.output,
+              output: typeof rawOutput === "string"
+                ? { type: "text" as const, value: rawOutput }
+                : { type: "json" as const, value: rawOutput ?? null },
             };
           }),
         });

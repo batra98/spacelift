@@ -24,6 +24,7 @@ export default function Home() {
 
   // Design state
   const [roomImage, setRoomImage] = useState<string | null>(null);
+  const [originalRoomImage, setOriginalRoomImage] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editedImageBase64, setEditedImageBase64] = useState<string | null>(null);
@@ -60,13 +61,13 @@ export default function Home() {
   }, []);
 
   const saveSessionToGallery = useCallback(async () => {
-    if (!roomImage || !editedImageBase64 || selectedIds.size === 0) return;
+    if (!originalRoomImage || !editedImageBase64 || selectedIds.size === 0) return;
     const selectedProducts = products.filter((p) => selectedIds.has(p.id));
     const totalCost = selectedProducts.reduce((sum, p) => sum + p.price, 0);
 
     // Compress images before storing to avoid QuotaExceededError
     const [compressedOriginal, compressedEdited] = await Promise.all([
-      compressDataUrl(roomImage),
+      compressDataUrl(originalRoomImage),
       compressDataUrl(`data:image/jpeg;base64,${editedImageBase64}`),
     ]);
 
@@ -91,7 +92,7 @@ export default function Home() {
       try { localStorage.setItem("spaceliftSessions", JSON.stringify(trimmed)); } catch { /* give up */ }
       alert("Saved (older sessions trimmed to free space).");
     }
-  }, [roomImage, editedImageBase64, selectedIds, products, savedSessions, compressDataUrl]);
+  }, [originalRoomImage, editedImageBase64, selectedIds, products, savedSessions, compressDataUrl]);
 
   const deleteSession = useCallback((id: string) => {
     const updated = savedSessions.filter((s) => s.id !== id);
@@ -102,6 +103,7 @@ export default function Home() {
 
   const handleImageUpload = useCallback((dataUrl: string) => {
     setRoomImage(dataUrl);
+    setOriginalRoomImage(dataUrl);
     setEditedImageBase64(null);
     setSelectedIds(new Set());
     setSelectedProduct(null);
@@ -251,21 +253,21 @@ export default function Home() {
             key="design"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: view === "design" ? 1 : 0, x: view === "design" ? 0 : -20 }}
-            className="h-full grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_420px] gap-4 p-4 md:p-6"
+            className="h-full grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px] gap-6 p-5 md:p-8"
             style={{ 
               display: view === "design" ? "grid" : "none",
               pointerEvents: view === "design" ? "auto" : "none" 
             }}
           >
               {/* Left: Chat + Room Canvas */}
-              <div className="flex flex-col gap-4 h-full overflow-hidden">
+              <div className="flex flex-col gap-6 h-full overflow-hidden">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1, duration: 0.5 }}
                 >
                   <RoomCanvas
-                    imageUrl={roomImage}
+                    imageUrl={originalRoomImage}
                     isPlacing={false}
                     isApplying={false}
                     selectedProduct={selectedProduct}

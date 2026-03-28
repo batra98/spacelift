@@ -325,7 +325,7 @@ const ChatPane = forwardRef<ChatPaneRef, ChatPaneProps>(function ChatPane({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 min-h-0">
         {/* Welcome message when empty */}
         {visibleMessages.length === 0 && (
           <motion.div
@@ -470,9 +470,9 @@ const ChatPane = forwardRef<ChatPaneRef, ChatPaneProps>(function ChatPane({
       </AnimatePresence>
 
       {/* Input bar */}
-      <div className="px-4 pb-4 flex-shrink-0">
+      <div className="px-5 pb-5 flex-shrink-0">
         <div
-          className="flex items-end gap-2 rounded-2xl px-3 py-2"
+          className="flex items-end gap-2 rounded-2xl px-4 py-3"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border-subtle)",

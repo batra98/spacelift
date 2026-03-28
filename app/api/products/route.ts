@@ -97,7 +97,7 @@ const PRODUCTS: Product[] = [
     category: "mirrors",
     imageUrl: "/products/mirror.png",
     placementImage: "/products/mirror.png",
-    tags: ["mirror", "wall", "geometric", "reflection", "decor"],
+    tags: ["mirror", "wall", "geometric", "reflection", "decor", "hexagonal"],
     rating: 4.8,
     brand: "Reflect",
   },
@@ -145,9 +145,88 @@ const PRODUCTS: Product[] = [
     rating: 4.7,
     brand: "Aroma Lab",
   },
+  {
+    id: "p13",
+    name: "Round Brass Wall Mirror 28\"",
+    price: 135,
+    category: "mirrors",
+    imageUrl: "/products/mirror.png",
+    placementImage: "/products/mirror.png",
+    tags: ["mirror", "wall", "round", "circular", "brass", "gold", "modern"],
+    rating: 4.9,
+    brand: "Reflect",
+  },
+  {
+    id: "p14",
+    name: "Rattan Pendant Light",
+    price: 95,
+    category: "lighting",
+    imageUrl: "/products/lamp.png",
+    placementImage: "/products/lamp.png",
+    tags: ["lamp", "lighting", "pendant", "rattan", "ceiling", "boho", "woven"],
+    rating: 4.7,
+    brand: "Lumino",
+  },
+  {
+    id: "p15",
+    name: "Woven Storage Baskets (Set of 3)",
+    price: 58,
+    category: "storage",
+    imageUrl: "/products/vase.png",
+    placementImage: "/products/vase.png",
+    tags: ["basket", "storage", "woven", "seagrass", "organization", "boho"],
+    rating: 4.5,
+    brand: "Terrain",
+  },
+  {
+    id: "p16",
+    name: "Velvet Throw Pillows (Set of 2)",
+    price: 45,
+    category: "textiles",
+    imageUrl: "/products/blanket.png",
+    placementImage: "/products/blanket.png",
+    tags: ["pillow", "cushion", "velvet", "sofa", "cozy", "accent", "throw"],
+    rating: 4.8,
+    brand: "Plush & Co",
+  },
+  {
+    id: "p17",
+    name: "Minimalist Floating Shelf Set",
+    price: 72,
+    category: "storage",
+    imageUrl: "/products/shelf.png",
+    placementImage: "/products/shelf.png",
+    tags: ["shelf", "floating", "wall", "minimalist", "wood", "display"],
+    rating: 4.6,
+    brand: "Nordic Form",
+  },
+  {
+    id: "p18",
+    name: "Fiddle Leaf Fig Tree 4ft",
+    price: 65,
+    category: "plants",
+    imageUrl: "/products/plant.png",
+    placementImage: "/products/plant.png",
+    tags: ["plant", "tree", "fiddle leaf", "fig", "green", "tall", "indoor"],
+    rating: 4.8,
+    brand: "Greenleaf",
+  },
 ];
 
 
+
+function scoreProduct(product: Product, queryWords: string[]): number {
+  const nameLower = product.name.toLowerCase();
+  const catLower = product.category.toLowerCase();
+  let score = 0;
+  for (const word of queryWords) {
+    if (word.length < 2) continue;
+    if (nameLower.includes(word)) score += 3;
+    if (catLower.includes(word)) score += 2;
+    if (product.tags.some((t) => t.includes(word) || word.includes(t))) score += 1;
+  }
+  return score;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -157,12 +236,11 @@ export async function GET(request: Request) {
   let results = PRODUCTS;
 
   if (query) {
-    results = PRODUCTS.filter(
-      (p) =>
-        p.tags.some((t) => t.includes(query) || query.includes(t)) ||
-        p.category.toLowerCase().includes(query) ||
-        p.name.toLowerCase().includes(query)
-    );
+    const words = query.split(/\s+/).filter((w) => w.length >= 2);
+    const scored = PRODUCTS.map((p) => ({ product: p, score: scoreProduct(p, words) }))
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score);
+    results = scored.map((s) => s.product);
   } else if (category) {
     results = PRODUCTS.filter(
       (p) =>

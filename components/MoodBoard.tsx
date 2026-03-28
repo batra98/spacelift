@@ -115,7 +115,7 @@ export default function MoodBoard({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-2 hide-scrollbar">
+      <div className="flex-1 overflow-y-auto p-5 pb-2 hide-scrollbar">
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, i) => (
@@ -170,7 +170,7 @@ export default function MoodBoard({
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="grid grid-cols-2 gap-3 pb-2 pt-1">
+                        <div className="grid grid-cols-2 gap-4 pb-2 pt-1">
                           {items.map((product, i) => (
                             <ProductCard
                               key={product.id}
@@ -198,11 +198,11 @@ export default function MoodBoard({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="flex-shrink-0 p-4 pt-3"
+            className="flex-shrink-0 p-5 pt-4"
             style={{ borderTop: "1px solid var(--border-card)", background: "var(--glass-bg)" }}
           >
             {/* Selected thumbnails strip */}
-            <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar pb-1">
+            <div className="flex gap-2.5 mb-3 overflow-x-auto hide-scrollbar pb-1">
               {products
                 .filter((p) => selectedIds.has(p.id))
                 .map((p) => (
@@ -210,7 +210,7 @@ export default function MoodBoard({
                     <img
                       src={p.imageUrl}
                       alt={p.name}
-                      className="w-10 h-10 rounded-xl object-cover"
+                      className="w-11 h-11 rounded-xl object-cover"
                       style={{ border: "1.5px solid var(--accent-primary)" }}
                     />
                   </div>

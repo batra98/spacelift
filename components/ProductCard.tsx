@@ -42,7 +42,7 @@ export default function ProductCard({ product, index, isSelected, onSelect }: Pr
       </div>
 
       {/* Product Image */}
-      <div className="relative h-36 overflow-hidden">
+      <div className="relative h-40 overflow-hidden">
         <img
           src={product.imageUrl}
           alt={product.name}
@@ -66,14 +66,14 @@ export default function ProductCard({ product, index, isSelected, onSelect }: Pr
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        <p className="font-semibold text-sm leading-tight" style={{ color: "var(--text-primary)" }}>
+      <div className="p-4">
+        <p className="font-semibold text-sm leading-snug" style={{ color: "var(--text-primary)" }}>
           {product.name}
         </p>
-        <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+        <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
           {product.brand}
         </p>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-3">
           <span className="font-bold" style={{ color: "var(--accent-secondary)" }}>
             ${product.price}
           </span>

@@ -71,7 +71,7 @@ export default function RoomCanvas({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center h-72 gap-4"
+            className="flex flex-col items-center justify-center h-80 gap-4"
             style={{ color: "var(--text-secondary)" }}
           >
             <div
@@ -100,7 +100,7 @@ export default function RoomCanvas({
               src={`data:image/jpeg;base64,${editedImageUrl}`}
               alt="Styled room"
               className="w-full object-cover"
-              style={{ maxHeight: "500px", display: "block" }}
+              style={{ maxHeight: "520px", display: "block" }}
             />
 
             {/* Before (original) clipped on left */}
@@ -113,7 +113,7 @@ export default function RoomCanvas({
                 alt="Original room"
                 className="w-full object-cover"
                 style={{
-                  maxHeight: "500px",
+                  maxHeight: "520px",
                   width: containerRef.current?.offsetWidth
                     ? `${containerRef.current.offsetWidth}px`
                     : "100%",
@@ -170,7 +170,7 @@ export default function RoomCanvas({
               src={imageUrl}
               alt="Your room"
               className="w-full object-cover"
-              style={{ maxHeight: "500px" }}
+              style={{ maxHeight: "520px" }}
             />
             {selectedProduct && (
               <motion.div
