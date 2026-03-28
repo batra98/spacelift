@@ -163,7 +163,8 @@ export async function POST(req: NextRequest) {
     "anonymous";
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   const result = streamText({
     model: google("gemini-2.5-flash"),
