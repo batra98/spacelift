@@ -9,6 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.12.21",
+    "@assistant-ui/react-markdown": "^0.12.7",
+    "@google/generative-ai": "^0.24.1",
+    "@unkey/api": "^2.3.2",
+    "framer-motion": "^12.38.0",
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^1.7.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
